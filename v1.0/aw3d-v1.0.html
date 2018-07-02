@@ -201,34 +201,40 @@
 <script src="/js/localforage.js"></script>
 
 <script>
+
     var CacheStorage = localforage.createInstance({
         driver: localforage.INDEXEDDB,
         name: "anywhere3d",
         storeName: "cache",
         version: 1.0
     });
+
     var GalleryStorage = localforage.createInstance({
         driver: localforage.INDEXEDDB,
         name: "anywhere3d",
         storeName: "gallery",
         version: 1.0
     });
+
     var PoseStorage = localforage.createInstance({
         driver: localforage.INDEXEDDB,
         name: "anywhere3d",
         storeName: "poses",
         version: 1.0
     });
+
     CacheStorage.ready().then(function() {
         console.log("[CacheStorage ready]:", CacheStorage.driver()); // <-- asyncStorage
     }).catch(function (err) {
         console.error("[CacheStorage Error]:", err); 
     });
+
     GalleryStorage.ready().then(function() {
         console.log("[GalleryStorage ready]:", GalleryStorage.driver()); // <-- asyncStorage
     }).catch(function (err) {
         console.error("[GalleryStorage Error]:", err); 
     });
+
     PoseStorage.ready().then(function() {
         console.log("[PoseStorage ready]:", PoseStorage.driver()); // <-- asyncStorage
     }).catch(function (err) {
