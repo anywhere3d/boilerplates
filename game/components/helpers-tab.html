@@ -1,0 +1,114 @@
+<style>
+
+    .helper a, 
+    .display-helper a,
+    .outfit-helper a { 
+        color:#fff; 
+        font: bold 16px Arial;
+        cursor: pointer;
+        line-height: 1.5em;
+        text-decoration: none;
+    }
+
+    .outfit-helper:focus,
+    .helper:focus { outline:none; }
+
+    .outfit-helpers a:focus,
+    .helpers a:focus { outline:none; }
+
+    .helpers-header h4 { cursor:pointer; }
+
+</style>
+
+        <!-- DISPLAY HELPERS -->
+
+<div class="helpers-header display-header">
+    <h4>Display helpers:</h4>
+</div>
+
+<div id="display-helpers">
+
+    <li id="ground" class="display-helper"><a>Show ground</a></li>
+    <li id="ground-helper" class="display-helper"><a>Hide ground helper</a></li>
+    <li id="origin-helper" class="display-helper"><a>Hide origins helper</a></li>
+    <li id="axis-helper" class="display-helper"><a>Hide axis helper</a></li>
+    <li id="player-helper" class="display-helper"><a>Hide Player helpers</a></li>
+    <li id="joysticks-helper" class="display-helper"><a>Hide joysticks</a></li>
+
+</div>
+
+<hr/>
+
+<script>
+
+$(function(){
+
+    const displayHeaderSelector = ".display-header";
+    const helpersHeaderSelector = ".helpers-header";
+    const displayHelpersSelector = "#display-helpers";
+
+    $(displayHeaderSelector).on("dblclick", function(){
+        var item = $(displayHelpersSelector).get(0);
+        if ( $(item).css("display") == "none" ) {
+            $(item).slideDown();
+        } else {
+            $(item).slideUp();
+        }
+    });
+
+});
+
+</script>
+
+<script>
+
+$(function(){
+
+//  Display helpers.
+
+    $("#ground").get(0).target = ground;
+    $("#ground-helper").get(0).target = groundHelper;
+    $("#origin-helper").get(0).target = axisOriginHelper;
+    $("#axis-helper").get(0).target = axisCustomHelper;
+    $("#player-helper").get(0).target = localPlayer.holder;
+
+    $("#ground").on("click", onVisible);
+    $("#ground-helper").on("click", onVisible);
+    $("#origin-helper").on("click", onVisible);
+    $("#axis-helper").on("click", onVisible);
+    $("#player-helper").on("click", onVisible);
+
+//  Joystick display helper.
+
+    $("#joysticks-helper").get(0).value = true;
+    $("#joysticks-helper").get(0).target = $(".joystick-controls");
+    $("#joysticks-helper").on("click", function(){
+
+        this.value = !this.value;
+
+        if ( !!this.value ) {
+            this.target.removeClass("hidden");
+            var text = $(this).find("a").text().replace("Show", "Hide");
+        } else {
+            this.target.addClass("hidden");
+            var text = $(this).find("a").text().replace("Hide", "Show");
+        }
+
+        $(this).find("a").text( text );
+    });
+
+    function onVisible(){
+
+        this.target.visible = !this.target.visible;
+
+        if (this.target.visible)
+            var text = $(this).find("a").text().replace("Show", "Hide");
+        else
+            var text = $(this).find("a").text().replace("Hide", "Show");
+
+        $(this).find("a").text( text );
+    }
+
+});
+
+</script>
