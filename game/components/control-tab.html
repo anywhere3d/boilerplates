@@ -1,0 +1,998 @@
+<!-- control-tab-v1.2.html -->
+
+<div id="actions-holder" class="side-holder">
+
+    <style>
+
+        .anim-btn { width:21%; padding:0.5rem 0; }
+        .anim-btn + .anim-btn { margin-left:0.5rem; }
+        .turn-cw, .turn-ccw { width:45%; }
+        .turn-cw + .turn-ccw { margin-left:0.5rem; }
+
+        .action-controls-output {
+            width:50px; outline:none;
+            color:#ffffff; border:none; 
+            background-color:rgba(255,255,255,0);
+            font-weight:bold; font-size:1em; 
+            text-align:right; font-family:Arial;
+        }
+
+        #turn-ctrl-slider, 
+        #camera-offset-slider, 
+        #camera-radius-slider {
+            display:inline; 
+            width:80%; 
+            vertical-align:-5px;
+        }
+
+        .step-output { width:42px; }
+
+        h4.helpers-header,
+        .helpers-header h4 {
+            cursor:pointer; 
+        }
+
+    </style>
+
+    <!-- ACTION CONTROLS -->
+
+    <h4 class="helpers-header action-controls-header">Action Controls:</h4>
+
+    <div id="action-controls-panel">
+
+        <div class="slider-row" style="width:100%;display:inline-block;text-align:center;margin-bottom:10px;">
+            <div class="btn btn-danger btn-white-outline anim-btn animation-control" id="idle">idle</div>
+            <div class="btn btn-success btn-white-outline anim-btn animation-control" id="walk">walk</div>
+            <div class="btn btn-success btn-white-outline anim-btn animation-control" id="run">run</div>
+            <div class="btn btn-info btn-white-outline anim-btn animation-control" id="jump">jump</div>
+        </div>
+
+        <h4 class="helpers-header direction-controls-header">Direction Controls:</h4>
+
+        <div class="slider-row" style="width:100%;display:inline-block;text-align:center;margin-bottom:10px;">
+            <div class="btn btn-primary btn-white-outline anim-btn direction-control" id="left-view-btn">left</div>
+            <div class="btn btn-primary btn-white-outline anim-btn direction-control" id="front-view-btn">front</div>
+            <div class="btn btn-primary btn-white-outline anim-btn direction-control" id="back-view-btn">back</div>
+            <div class="btn btn-primary btn-white-outline anim-btn direction-control" id="right-view-btn">right</div>
+        </div>
+
+    </div>
+
+    <!-- CAMERA CONTROLS -->
+
+    <h4 class="helpers-header camera-controls-header">Camera Controls:</h4>
+
+    <div id="camera-controls-panel" class="slider-row" style="width:100%;margin-bottom:10px;display:inline-block">
+        <li>
+            <label title="Camera vertial offset">Vertical offset:</label>
+            <input type="range" id="camera-offset-slider" min="0" max="25" value="12" step="1">
+            <input type="number" id="camera-offset-output" class="action-controls-output" step="1">
+        </li>
+        <li>
+            <label title="Camera radius">Camera distance:</label>
+            <input type="range" id="camera-radius-slider" min="6" max="64" value="29" step="1">
+            <input type="number" id="camera-radius-output" class="action-controls-output" step="1">
+        </li>
+        <li>
+            <label title="hold pressed to turn">Avatar direction:</label>
+            <input type="range" id="turn-ctrl-slider" min="0" max="360" value="180" step="1">
+            <input type="number" id="turn-ctrl-output" class="action-controls-output" value="180" step="1">
+        </li>
+
+    </div>
+
+</div>
+
+<script>
+
+$(function(){
+
+    const actionHeaderSelector = ".action-controls-header";
+    const actionControlsSelector = "#action-controls-panel"
+
+    $(actionHeaderSelector).on("dblclick", function(){
+        var selector = actionControlsSelector;
+        if ( $(selector).css("display") == "none" ) {
+            $(selector).slideDown();
+        } else {
+            $(selector).slideUp();
+        }
+    });
+
+    const cameraHeaderSelector = ".camera-controls-header";
+    const cameraControlsSelector = "#camera-controls-panel";
+
+    $(cameraHeaderSelector).on("dblclick", function(){
+        var selector = cameraControlsSelector;
+        if ( $(selector).css("display") == "none" ) {
+            $(selector).slideDown();
+        } else {
+            $(selector).slideUp();
+        }
+    });
+
+});
+
+</script>
+
+
+<script>
+
+//  AnimationPanelControls.js
+
+//  var degStep = 1.0; // avatar rotation step in deg.
+
+    var AnimationPanelControls = {
+
+        isActive: false,
+        turnCW: false,
+        turnCCW: false,
+        degStep: 1.0, // avatar rotation step in deg.
+
+        rotateCW: function(){
+        //  localPlayer.outfit.direction.rotation.y -= THREE.Math.degToRad( degStep );  // rad. (turn avatar degStep degrees cw)
+            localPlayer.controller.direction -= THREE.Math.degToRad( this.degStep );    // number rad.
+        },
+
+        rotateCCW: function(){
+        //  localPlayer.outfit.direction.rotation.y += THREE.Math.degToRad( degStep );  // rad. (turn avatar degStep degrees ccw)
+            localPlayer.controller.direction += THREE.Math.degToRad( this.degStep );    // number rad.
+        },
+
+        turn: function(deg){
+            localPlayer.controller.direction += THREE.Math.degToRad( deg );             // number rad.
+        },
+
+        update: function(){
+/*
+        //  Send move player message to server when position is updating.
+            if ( !!controlsChannel ) controlsChannel.publish({
+                playerid : socket.id,
+                direction: localPlayer.outfit.direction.rotation.y,
+                position : localPlayer.outfit.direction.position.toArray(),
+            });
+*/
+        },
+
+        toIdle: function( player ){
+            var player = player || localPlayer;
+        //  Update player controller direction.
+            player.outfit.AnimationsHandler.stop();
+            player.controller.isRunning = false;
+            player.controller.isWalking = false;
+            player.controller.isIdling  = true;
+            player.controller.movementSpeed = 0;
+            player.outfit.AnimationsHandler.play("idle");
+            player.controller.dispatchEvent({type:"startIdling"});
+        },
+
+    };
+
+</script>
+
+
+<script>
+
+$(function(){
+
+    const idleButtonSelector     = "#idle";
+    const walkButtonSelector     = "#walk";
+    const runButtonSelector      = "#run";
+    const jumpButtonSelector     = "#jump";
+    const frontViewBtnSelector   = "#front-view-btn";
+    const backViewBtnSelector    = "#back-view-btn";
+    const leftViewBtnSelector    = "#left-view-btn";
+    const rightViewBtnSelector   = "#right-view-btn";
+    const animButtonSelector     = ".anim-btn";
+    const turnCWButtonSelector   = ".turn-cw";
+    const turnCCWButtonSelector  = ".turn-ccw";
+    const turnCtrlOutputSelector = "#turn-ctrl-output";
+    const turnCtrlSliderSelector = "#turn-ctrl-slider";
+    const cameraOffsetOutputSelector = "#camera-offset-output";
+    const cameraOffsetSliderSelector = "#camera-offset-slider";
+    const cameraRadiusSliderSelector = "#camera-radius-slider";
+    const cameraRadiusOutputSelector = "#camera-radius-output";
+//  const AnimationPanelControlsSelector = "#AnimationPanelControls";
+
+//  Camera offset static slider.
+    $(cameraOffsetSliderSelector).val( cameraControls.offset.y );
+    $(cameraOffsetSliderSelector).on("input", function(){
+        cameraControls.offset.y = parseInt( this.value );
+        $(cameraOffsetOutputSelector).val( cameraControls.offset.y );
+    });
+
+//  Camera offset output.
+
+    $(cameraOffsetOutputSelector).val( cameraControls.offset.y );
+    $(cameraOffsetOutputSelector).on("input", function(){
+        if ( !cameraControls ) return;
+        if ( isNaN( this.value ) ) return;
+        cameraControls.offset.y = parseFloat( this.value );
+    });
+
+//  Avatar static turn slider.
+
+    $(turnCtrlSliderSelector).val( degIntDirection() );
+    $(turnCtrlSliderSelector).on("input", function(){
+        var angle = THREE.Math.degToRad( parseInt(this.value) ); // number rad.
+        localPlayer.controller.direction = angle;
+        $(turnCtrlOutputSelector).val( this.value );
+    });
+
+//  Avatar turn output.
+
+    $(turnCtrlOutputSelector).val( degIntDirection() );
+    $(turnCtrlOutputSelector).on("mousedown", function(){
+        this.value = THREE.Math.radToDeg( localPlayer.controller.direction ).toFixed(0); // string deg.
+    });
+
+    $(turnCtrlOutputSelector).on("input", function(){
+        if ( isNaN( this.value ) ) return;
+        this.value %= 360;
+        var angle = THREE.Math.degToRad( parseInt(this.value) ); // number rad.
+        localPlayer.controller.direction = angle;
+        $(turnCtrlSliderSelector).val( mod(this.value, 360) );
+        function mod( a, n ) { return ( a % n + n ) % n; };
+    });
+
+//  Direction control buttons.
+
+    $(frontViewBtnSelector).on("click", function(){
+        var frontAngle = Math.PI - cameraControls.getFrontAngle();
+
+        turnTo( frontAngle + Math.PI )();
+
+    });
+
+    $(backViewBtnSelector).on("click", function(){
+        var frontAngle = Math.PI - cameraControls.getFrontAngle();
+
+        turnTo( frontAngle )();
+
+    });
+
+    $(leftViewBtnSelector).on("click", function(){
+        var frontAngle = Math.PI - cameraControls.getFrontAngle();
+
+        turnTo( frontAngle - Math.PI/2 )();
+
+    });
+
+    $(rightViewBtnSelector).on("click", function(){
+        var frontAngle = Math.PI - cameraControls.getFrontAngle();
+
+        turnTo( frontAngle + Math.PI/2 )();
+
+    });
+
+    function turnTo( rad, immediate ){
+        var deltaAngle = getDeltaAngle( localPlayer.controller.direction, rad );
+
+        return function turn(){
+            windowAnimationFrameRequestID = requestAnimationFrame( turn );
+
+            if ( isNaN( deltaAngle ) ) {
+                cancelAnimationFrame( windowAnimationFrameRequestID );
+                localPlayer.outfit.update(); return;
+            }
+            if ( immediate ) {
+                localPlayer.controller.direction += deltaAngle;
+                cancelAnimationFrame( windowAnimationFrameRequestID );
+                localPlayer.outfit.update(); return;
+            }
+            if ( Math.abs( deltaAngle ) < 0.000017453292519943296  ) {
+                cancelAnimationFrame( windowAnimationFrameRequestID );
+                var deg = parseInt( THREE.Math.radToDeg(localPlayer.controller.direction) );
+                $(turnCtrlOutputSelector).val( mod(deg, 360) );
+                $(turnCtrlSliderSelector).val( mod(deg, 360) );
+                localPlayer.outfit.update(); return;
+            }
+
+            localPlayer.controller.direction = mod( localPlayer.controller.direction += ( deltaAngle *= 0.5 ), 2 * Math.PI );
+        }
+
+    }
+
+    function getDeltaAngle( current, target ) {
+        var a = mod( ( current - target ), 2 * Math.PI );
+        var b = mod( ( target - current ), 2 * Math.PI );
+        return a < b ? -a : b;
+    }
+
+    function mod( a, n ) { return ( a % n + n ) % n;  }
+
+//  Animation control buttons.
+
+    $(idleButtonSelector).on("click", function(){
+
+        if ( localPlayer.controller.isIdling ) return;
+        if ( localPlayer.controller.isJumping ) return;
+        if ( localPlayer.controller.isOnSlope ) return;
+        if ( !localPlayer.controller.isGrounded ) return;
+
+          localPlayer.outfit.AnimationsHandler.stop();
+          localPlayer.controller.isRunning = false;
+          localPlayer.controller.isWalking = false;
+          localPlayer.controller.isIdling  = true;
+          localPlayer.controller.movementSpeed = 0;
+          localPlayer.outfit.AnimationsHandler.play("idle");
+          localPlayer.controller.dispatchEvent({type:"startIdling"});
+
+    });
+
+    $(walkButtonSelector).on("click", function(){
+
+        if ( localPlayer.controller.isJumping ) return;
+        if ( localPlayer.controller.isOnSlope ) return;
+        if ( !localPlayer.controller.isGrounded ) return;
+
+        this.active = !this.active;
+
+        if ( this.active ) {
+
+            localPlayer.outfit.AnimationsHandler.stop();
+            localPlayer.controller.isRunning = true;
+            localPlayer.controller.isWalking = true;
+            localPlayer.controller.movementSpeed = 28;
+            localPlayer.outfit.AnimationsHandler.play("walk");
+
+        } else {
+
+            localPlayer.outfit.AnimationsHandler.stop();
+            localPlayer.controller.isRunning = false;
+            localPlayer.controller.isWalking = false;
+            localPlayer.controller.isIdling  = true;
+            localPlayer.controller.movementSpeed = 0;
+            localPlayer.outfit.AnimationsHandler.play("idle");
+            localPlayer.controller.dispatchEvent({type:"startIdling"});
+
+        }
+
+    });
+
+    $(runButtonSelector).on("click", function(){
+
+        if ( localPlayer.controller.isJumping ) return;
+        if ( localPlayer.controller.isOnSlope ) return;
+        if ( !localPlayer.controller.isGrounded ) return;
+
+        this.active = !this.active;
+
+        if (this.active){
+
+            localPlayer.outfit.AnimationsHandler.stop();
+            localPlayer.controller.isRunning = true;
+            localPlayer.controller.isWalking = false;
+            localPlayer.controller.movementSpeed = 45;
+            localPlayer.outfit.AnimationsHandler.play("run");
+
+        } else {
+
+            localPlayer.outfit.AnimationsHandler.stop();
+            localPlayer.controller.isRunning = false;
+            localPlayer.controller.isWalking = false;
+            localPlayer.controller.isIdling  = true;
+            localPlayer.controller.movementSpeed = 0;
+            localPlayer.outfit.AnimationsHandler.play("idle");
+            localPlayer.controller.dispatchEvent({type:"startIdling"});
+
+        }
+
+    });
+
+    $(jumpButtonSelector).on("click", function onJump(){
+
+        if ( localPlayer.controller.isJumping ) return;   // or //
+        if ( localPlayer.controller.isOnSlope ) return;
+        if ( !localPlayer.controller.isGrounded ) return; // or //
+
+    //  Player controller jump.
+        localPlayer.controller.jump();
+        localPlayer.outfit.AnimationsHandler.jump();
+
+    });
+
+//  Animation controls active.
+
+    $(animButtonSelector).on("click", function(){
+        AnimationPanelControls.isActive = localPlayer.controller.isRunning;
+        $(turnCtrlOutputSelector).val( degIntDirection() );  // string deg.
+    });
+
+    function degIntDirection(){
+        return parseInt( THREE.Math.radToDeg( localPlayer.controller.direction ) ) % 360;
+    }
+
+    function updateDirectionOutputValue(){
+        $(turnCtrlOutputSelector).val( degIntDirection() );
+    }
+
+//  Update direction output value.
+
+    $(joystick1).on("update", function(){
+        $(turnCtrlSliderSelector).val( degIntDirection() );
+        $(turnCtrlOutputSelector).val( degIntDirection() );
+    });
+
+    $(keyInputControls).on( "movekeyon movekeyoff movekeychange jumpkeypress", function(){
+        $(turnCtrlSliderSelector).val( degIntDirection() );
+        $(turnCtrlOutputSelector).val( degIntDirection() );
+    });
+
+//  Update action buttons status.
+
+    $(idleButtonSelector).on("click", function(){
+        $(walkButtonSelector).get(0).active = localPlayer.controller.isRunning && localPlayer.controller.isWalking;
+        $(runButtonSelector).get(0).active = localPlayer.controller.isRunning && !localPlayer.controller.isWalking;
+    });
+
+    $(walkButtonSelector).on("click", function(){
+        $(walkButtonSelector).get(0).active = localPlayer.controller.isRunning && localPlayer.controller.isWalking;
+        $(runButtonSelector).get(0).active = localPlayer.controller.isRunning && !localPlayer.controller.isWalking;
+    });
+
+    $(runButtonSelector).on("click", function(){
+        $(walkButtonSelector).get(0).active = localPlayer.controller.isRunning && localPlayer.controller.isWalking;
+        $(runButtonSelector).get(0).active = localPlayer.controller.isRunning && !localPlayer.controller.isWalking;
+    });
+
+    $(jumpButtonSelector).on("click", function(){
+        $(walkButtonSelector).get(0).active = localPlayer.controller.isRunning && localPlayer.controller.isWalking;
+        $(runButtonSelector).get(0).active = localPlayer.controller.isRunning && !localPlayer.controller.isWalking;
+    });
+
+//  Handle animation panel controls updating.
+
+    $(idleButtonSelector).on("click", function(){
+        $(AnimationPanelControlsSelector).removeClass("update");   // disactivate updating.
+        $update = $(".update"); // $("input[type=hidden].update"); // stop updating.
+    });
+
+    $(walkButtonSelector).on("click", function(){
+
+        if ( this.active )
+            $(AnimationPanelControlsSelector).addClass("update");    // activate updating.
+        else
+            $(AnimationPanelControlsSelector).removeClass("update"); // disactivate updating.
+
+        $update = $(".update"); // $("input[type=hidden].update");   // start/stop updating.
+    });
+
+    $(runButtonSelector).on("click", function(){
+
+        if ( this.active )
+            $(AnimationPanelControlsSelector).addClass("update");    // activate updating.
+        else
+            $(AnimationPanelControlsSelector).removeClass("update"); // disactivate updating.
+
+        $update = $(".update"); // $("input[type=hidden].update");   // start/stop updating.
+    });
+
+//  Update action buttons status.
+
+    const actionControlsSelector = "#action-controls-panel";
+
+    $(joystick1).on( "active disactive", function () {
+        if ( $(actionControlsSelector).length == 0 ) return;
+        $(walkButtonSelector).get(0).active = localPlayer.controller.isRunning && localPlayer.controller.isWalking;
+        $(runButtonSelector).get(0).active = localPlayer.controller.isRunning && !localPlayer.controller.isWalking;
+    });
+
+    $(keyInputControls).on( "movekeyon movekeyoff movekeychange jumpkeypress", function(){
+        if ( $(actionControlsSelector).length == 0 ) return;
+        $(walkButtonSelector).get(0).active = localPlayer.controller.isRunning && localPlayer.controller.isWalking;
+        $(runButtonSelector).get(0).active = localPlayer.controller.isRunning && !localPlayer.controller.isWalking;
+    });
+
+    $(localPlayer.controller).on( "startIdling startRunning startJumping endJumping", function(){
+        if ( $(actionControlsSelector).length == 0 ) return;
+        $(walkButtonSelector).get(0).active = localPlayer.controller.isRunning && localPlayer.controller.isWalking;
+        $(runButtonSelector).get(0).active = localPlayer.controller.isRunning && !localPlayer.controller.isWalking;
+    });
+
+//  Setup vertical offset output value on startup.
+
+    $(cameraOffsetSliderSelector).attr({ min: 0, max: 24, step: 1 });
+    $(cameraOffsetSliderSelector).val( cameraControls.offset.y );
+    $(cameraOffsetOutputSelector).val( cameraControls.offset.y );
+
+    $(cameraRadiusSliderSelector).attr({
+        min: cameraControls.minRadius,
+        max: cameraControls.maxRadius,
+        step: 1,
+    });
+
+    $(cameraRadiusSliderSelector).val( cameraControls.radius );
+    $(cameraRadiusOutputSelector).val( cameraControls.radius );
+
+    $(cameraRadiusSliderSelector).on("input", function(){
+        cameraControls.radius = this.value;
+        $(cameraRadiusOutputSelector).val( cameraControls.radius );
+    });
+
+    $(cameraRadiusOutputSelector).on("input", function(){
+        cameraControls.radius = this.value;
+        $(cameraRadiusSliderSelector).val( cameraControls.radius );
+    });
+
+    $(window).on( "wheel", function onMouseWheel(e) {
+        if ( !cameraControls ) return;
+        $(cameraRadiusSliderSelector).val( cameraControls.radius );
+        $(cameraRadiusOutputSelector).val( cameraControls.radius );
+    });
+
+    localPlayer.outfit.refresh();             // !important
+    localPlayer.controller.movementSpeed = 0; // !important
+
+
+
+});
+
+</script>
+
+
+        <!-- SNAPSHOT BUTTON -->
+
+
+<div id="snapshot-holder" class="side-holder">
+
+    <style>
+
+        #crop-button {
+            position:absolute;
+            bottom: 0px;
+            right: 0px;
+        }
+
+        #exit-button {
+            position:absolute;
+            bottom: 0px;
+            left: 0px;
+        }
+
+    </style>
+
+    <h4>Snapshots:</h4>
+    <div id="snapshot-crop-button" class="form-control btn btn-danger btn-white-outline gradient-btn">Take snapshot</div>
+
+</div>
+
+<script>
+
+$(function(){
+
+    const snapshotCropButtonSelector = "#snapshot-crop-button";
+    const snapshotSpinner = `<img class="snapshot-spinner" src="/img/loading.gif" style="width:32px;height:auto;">`;
+
+    $(snapshotCropButtonSelector).on("click", function (){
+
+        if ( isMobile ) {
+
+            var width  = $(sceneContainerSelector).width();
+            var height = $(sceneContainerSelector).height();
+
+            var options = {};
+            options.setSelect = [ 0, 0, width, height ];
+            options.minSize = [ width, height ];
+            options.maxSize = [ width, height ];
+            options.onChange = function(coords){};
+            options.onSelect = function(coords){};
+            options.onRelease = function(){};
+
+            $(renderer.domElement).Jcrop(options, function(){
+                var jcropper = this;
+                new Promise( function(resolve, reject){
+                    var selection = jcropper.tellSelect();
+                    var scaletion = jcropper.tellScaled();
+                    var img = renderer.domElement;
+                    var sourceX = selection.x;
+                    var sourceY = selection.y;
+                    var sourceWidth = img.width;
+                    var sourceHeight = img.height;
+                    var x = 0, y = 0;
+                    var width = $(sceneContainerSelector).width();
+                    var height = $(sceneContainerSelector).height();
+                    var canvas = document.createElement( "canvas" );
+                    var ctx = canvas.getContext("2d");
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(
+                        img,
+                        sourceX,
+                        sourceY,
+                        sourceWidth,
+                        sourceHeight,
+                        x, y,
+                        width,
+                        height
+                    );
+
+                    resolve( canvas );
+
+                }).then(function( canvas ){
+
+                    jcropper.destroy();
+                    $(sceneContainerSelector).append(renderer.domElement);
+                    $("img#loading").removeClass("hidden");
+                    return canvas.toDataURL("image/jpeg");
+
+                }).then(function( snapshotdata ){
+
+                    var watermarkUrl = "https://i.imgur.com/MrEaeSc.png";
+                    return watermarkedSnapshot( snapshotdata, watermarkUrl );
+
+                }).then(function( snapshotdata ){
+
+                    saveSnapshotDialog( snapshotdata );
+
+                });
+
+            });
+
+
+        } else {
+
+            var width  = 375; // 420;
+            var height = 570; // 570;
+
+            var options = {
+                aspectRatio: width / height,
+                setSelect: [
+                    (renderer.domElement.width * 0.5)  - (width * 0.5),
+                    (renderer.domElement.height * 0.5) - (height * 0.5),
+                    (renderer.domElement.width * 0.5)  + (width * 0.5),
+                    (renderer.domElement.height * 0.5) + (height * 0.5),
+                ],
+                minSize: [width, height],
+                maxSize: [width, height],
+                onChange: function(coords){},
+                onSelect: function(coords){},
+                onRelease: function(){
+                    this.exit();
+                },
+            };
+
+            $(renderer.domElement).Jcrop(options, function(){
+
+                $(".jcrop-tracker").addClass("middle");
+                jcrop_tracker = $(".jcrop-tracker").get(0);
+
+                $(jcrop_tracker).append([
+                    '<div id="crop-button" class="btn btn-primary">Crop</div>',
+                //  '<div id="exit-button" class="btn btn-default">Cancel</div>',
+                ].join("") );
+
+                var jcropper = this;
+                jcropper.exit = exit;
+                jcropper.crop = crop;
+
+                $("#exit-button").on( "click", function(){
+                    exit();
+                });
+
+                $("#crop-button").on( "click", function(){
+                    crop().then(function( canvas ){
+                        exit();
+                        $("img#loading").removeClass("hidden");
+                        return canvas.toDataURL("image/jpeg");
+                    }).then(function( snapshotdata ){
+                        var watermarkUrl = "https://i.imgur.com/MrEaeSc.png";
+                        return watermarkedSnapshot( snapshotdata, watermarkUrl );
+                    }).then(function( snapshotdata ){
+                        saveSnapshotDialog( snapshotdata );
+                    });
+                });
+
+                function crop(){
+                    return new Promise( function(resolve, reject){
+                        var selection = jcropper.tellSelect();
+                        var scaletion = jcropper.tellScaled();
+                        var img = renderer.domElement;
+                        var sourceX = selection.x;
+                        var sourceY = selection.y;
+                        var sourceWidth = selection.w;
+                        var sourceHeight = selection.h;
+                        var x = 0, y = 0;
+                        var width = selection.w;
+                        var height = selection.h;
+                        var canvas = document.createElement( 'canvas' );
+                        var ctx = canvas.getContext("2d");
+                        canvas.width = width;
+                        canvas.height = height;
+
+                        ctx.drawImage(
+                            img,
+                            sourceX,
+                            sourceY,
+                            sourceWidth,
+                            sourceHeight,
+                            x, y,
+                            width,
+                            height
+                        );
+
+                        resolve( canvas );
+                    });
+                }
+
+                function exit(){
+                    jcropper.destroy();
+                    $(container).append(renderer.domElement);
+                };
+
+            });
+
+        }
+
+    });
+
+    function watermarkedSnapshot( dataurl, wmUrl ){
+        return new Promise( function(resolve, reject){
+            var wm = new Watermark();
+            var wmOptions = {
+                position: [1,1],
+                scale:   0.5,
+                opacity: 1.0,
+            };
+            wm.setPicture( dataurl );
+            wm.addWatermark(wmUrl, wmOptions);
+            wm.render( function(){
+                debugMode && console.log( "watermark.getImgs:", wm.getImgs( "image/jpeg", 0.9 ) );
+                resolve( wm.getDataUrls( "image/jpeg", 0.9 )[0] );
+            });
+        });
+    }
+
+    function saveSnapshotDialog( data ){
+        $(".snapshot-spinner").remove();
+        var dialog = bootbox.dialog({
+            className: "middle",
+            closeButton: false,
+            message: '<img src="' + data + '" id="snapshot-preview" class="img-thumbnail" style="width:325px;">',
+            buttons: {
+                cancel: {
+                    label: 'Cancel',
+                    className: 'btn-default pull-left',
+                    callback: function(){
+                        $("img#loading").addClass("hidden");
+                    }
+                },
+                imgur: {
+                    label: 'Upload',
+                    className: 'btn-success',
+                    callback: function(){
+                        var options = {};
+                        uploadBase64( options ).then(function( imgurUrl ){
+                            successCallback( imgurUrl );
+                            $("img#loading").addClass("hidden");
+                        });
+                    }
+                },
+                save: {
+                    label: 'Save',
+                    className: 'btn-primary',
+                    callback:  function(){
+                        saveToDesktop();
+                    }
+                },
+            }
+
+        });
+
+        function saveToDesktop(){
+            return new Promise( function(resolve, reject){
+                data.replace("image/jpeg", "image/octet-stream");
+                var a = document.createElement("a");
+                $(a).one("click", function(){
+                    resolve();
+                    $(this).remove();
+                });
+                a.download = ["snapshot", Date.now().toString(36)].join("-") + ".jpg";
+                a.href = data;
+                a.click();
+            });
+        }
+
+        function dataURLtoBlob(dataurl) {
+            var arr = dataurl.split(','),
+                mime = arr[0].match(/:(.*?);/)[1],
+                bstr = atob(arr[1]),
+                n = bstr.length,
+                u8arr = new Uint8Array(n);
+            while(n--){
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            return new Blob([u8arr], {type:mime});
+        }
+
+        function uploadBase64( options ){
+
+            $("img#loading").removeClass("hidden");
+
+            var type = "image/jpeg";
+            var data = $("#snapshot-preview").attr("src").replace("data:image/jpeg;base64,", "");
+            var name = options.name || Date.now().toString(36);
+            var filename = name + ".jpg"
+            var title = options.title || "anywhere3d snapshot";
+            var description = options.description || "Avatar snapshot direct from http://anywhere3d.com #anywhere3d";
+
+            return new Promise( function(resolve, reject){
+
+                var formdata = new FormData();
+                formdata.append("type",  type);
+                formdata.append("image", data);
+                formdata.append("name",  filename);
+                formdata.append("title", title);
+                formdata.append("description", description);
+                var clientid = "95e1ecaf14ca5e6";
+                var endpoint = "https://api.imgur.com/3/image";
+                var xhttp = new XMLHttpRequest();
+                xhttp.open('POST', endpoint, true);
+                xhttp.setRequestHeader('Authorization', 'Client-ID ' + clientid);
+                xhttp.onreadystatechange = function () {
+                    if (this.readyState === 4) {
+                        var response = "";
+                        if (this.status >= 200 && this.status < 300) {
+                            response = JSON.parse(this.responseText);
+                            resolve( response ); // resolve: new Promise.
+                        } else {
+                            var err = JSON.parse(this.responseText).data.error;
+                            console.error( err.type, err );
+                            return bootboxErrorAlert(['<h2 style="margin:0;">', err.type,
+                                '</h2><br>',  err.message.replace(". ", ".<br>")
+                            ].join(""));
+                        //  throw Error( err );
+                        }
+                    }
+                };
+
+                xhttp.send(formdata);
+                xhttp = null;
+
+            }).then( function( response ){
+
+                var data = response.data;
+
+                w3.getHttpData(data.link, function(){});
+
+                var url = "/gallery/insert";
+                var jqxhr = $.post(url, {data:data})
+                .then( function( results ){
+                    $("img#loading").addClass("hidden");
+                    return results.success;
+                });
+
+                jqxhr.done( function( success ){
+                    data._id = success.insertedIds[0];
+                    db.open(function(err, database){
+                        if (err) console.error( err );
+                    }).then( function(){
+                        var collection = db.collection("gallery");
+                        collection.insert( data, function(err){
+                            if (err) throw err;
+                        }).then(function(){
+                            $("img#loading").addClass("hidden");
+                        }).catch(function (err) {
+                            throw err;
+                        });
+                    }).catch(function (err) {
+                        throw err;
+                    });
+                });
+
+                return data.link;
+
+            }).catch(function (err) {
+                $("img#loading").addClass("hidden");
+                console.error("SnapshotUploadError:", err);
+            });
+
+        }
+
+        function successCallback( url ){
+            bootbox.confirm({
+                size: "small",
+                className: "middle",
+                title: [
+                    '<div class="alert-icon icon-success"></div>',
+                    '<b>Snapshot uploaded successfully.</b>'
+                ].join(""),
+                message: [
+                    ['<b>url: </b><span><a href="', url, '"'].join(""),
+                    ['target="_blank">', url, '</a></span>'].join(""),
+                ].join(" "),
+                buttons: {
+                    cancel: {
+                        label: 'Close',
+                        className: 'btn-default',
+                    },
+                    confirm: {
+                        label: 'Open image',
+                        className: 'btn-primary',
+                    }
+                },
+                callback: function ( result ) {
+                    if ( result ) window.open( url );
+                }
+            });
+        }
+
+    }
+
+});
+
+</script>
+
+
+    <!-- BACKGROUND COLOR -->
+
+
+<div id="scene-background-holder" class="side-holder">
+
+    <style>
+        #background-colorpicker > div.sp-container,
+        #background-colorpicker > div.sp-container > div.sp-picker-container { background:none; border:none; width:100% }
+        #background-colorpicker > div.sp-container > div.sp-picker-container > div.sp-input-container  { width:70px; }
+        #background-colorpicker > div.sp-container > div.sp-picker-container > div.sp-input-container > input.sp-input { color:#fff }
+
+        @media (max-device-width: 480px){
+            .sp-hue { left: 85%; }
+        }
+
+    </style>
+
+    <div id="background-colorpicker">
+
+        <h4>Background color:</h4>
+
+        <input type="hidden" id="sp-scene-background">
+
+    </div>
+
+</div>
+
+<script>
+
+$(function(){
+
+//  Spectrum Colorpickers.js
+
+    const rendererContainerSelector = "#render-container";
+    const spectrumBackgroundSelector = "#sp-scene-background";
+
+    $(spectrumBackgroundSelector).spectrum({
+        preferredFormat: "hex",
+        color: "#000000",
+        flat: true,
+        showInput: true,
+        showInitial: true,
+        showButtons: false,
+        allowEmpty: false,
+        move: function(color) {
+            $(renderer.domElement).css({"background-color": color.toString("hex")});
+            $(rendererContainerSelector).css({"background-color": color.toString("hex")});
+            if ( !scene.background) return;
+            var hex = color.toString("hex").replace(/#/, "0x");
+            scene.background.setHex( hex );
+        }
+    });
+
+    $(spectrumBackgroundSelector).on("dragstop.spectrum", function(e, color) {
+        if ( !scene.background) {
+            $(this).spectrum( "set", "#000000" );
+            return;
+        }
+    });
+
+    (function (){
+    //  Colorpicker update.
+        if (!scene.background) return;
+        var colorHex = "#" + scene.background.getHexString();
+        $(spectrumBackgroundSelector).spectrum( "set", colorHex );
+        $(renderer.domElement).css({"background-color": colorHex});
+        $(rendererContainerSelector).css({"background-color": colorHex});
+    })();
+
+});
+
+</script>
